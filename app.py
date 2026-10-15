@@ -11,8 +11,9 @@ from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
 
 APP_DIR = Path(__file__).resolve().parent
-DB_PATH = Path(os.getenv("KEY_DB", APP_DIR / "keys.db"))
-ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "abbas@741")
+CONFIGURED_DB_PATH = Path(os.getenv("KEY_DB", str(APP_DIR / "keys.db")))
+DB_PATH = CONFIGURED_DB_PATH
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "change-this-admin-token")
 RESPONSE_MODE = os.getenv("RESPONSE_MODE", "plain")  # plain or json
 
 app = FastAPI(title="Key Validation API", version="1.0.0")
@@ -25,6 +26,17 @@ def db():
 
 
 def init_db():
+    global DB_PATH
+    # Hosted containers may not create the configured parent directory.
+    # Create it when possible; otherwise fall back to /tmp so startup succeeds.
+    try:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        probe = DB_PATH.parent / ".write_probe"
+        probe.touch(exist_ok=True)
+        probe.unlink(missing_ok=True)
+    except OSError:
+        DB_PATH = Path("/tmp/key-validation/keys.db")
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = db()
     conn.executescript(
         """
