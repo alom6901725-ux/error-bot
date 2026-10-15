@@ -3,6 +3,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
+RUN mkdir -p /data && chmod 777 /data
 ENV KEY_DB=/data/keys.db
 ENV RESPONSE_MODE=plain
 EXPOSE 8000
